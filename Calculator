@@ -1,0 +1,305 @@
+from rich import print
+from rich.table import Table
+import csv
+import numpy as np
+import math
+
+# INTRODUCTORY FUNCTION
+def show_intro():
+    print("[bold cyan]Aircraft Design Simulator[/bold cyan]")
+    print("Design a simplified aircraft and evaluate its performance.\n")
+    print("[bold cyan]Inputs[/bold cyan]")
+
+# ALL INPUT FUNCTIONS WITH VALIDATION 
+def get_wing_area():
+    while True:
+        value = float(input("Enter wing area in meters squared (eg. 16.2): "))
+        if value <= 0:
+            print("[red]Error: Wing area must be positive.[/red]")
+        else:
+            return value
+        print("[red]Error: Please enter a valid number.[/red]")
+
+def get_wingspan():
+    while True:
+        value = float(input("Enter wingspan in meters (eg. 11.0): "))
+        if value <= 0:
+            print("[red]Error: Wing area must be positive.[/red]")
+        else:
+            return value
+        print("[red]Error: Please enter a valid number.[/red]")
+
+def get_weight():
+    while True:
+        value = float(input("Enter estimated aircraft weight in kg (eg. 1000): "))
+        if value <= 0:
+            print("[red]Error: Weight must be positive.[/red]")
+        else:
+            return value
+        print("[red]Error: Invalid number.[/red]")
+
+def get_engine_type():
+    while True:
+        print("\nEnter Engine type:")
+        print("1 - Propeller")
+        print("2 - Jet")
+        choice = input("Select engine type (1 or 2): ")
+
+        if choice in ["1", "2"]:
+            return int(choice)
+        else:
+            print("[red]Error: Please enter 1 or 2.[/red]")
+
+def get_altitude():
+    while True:
+        
+        value = float(input("\nEnter max altitude in meters (eg. 4000): "))
+        if value < 0:
+            print("[red]Error: Altitude cannot be negative.[/red]")
+        else:
+            return value
+        print("[red]Error: Invalid input.[/red]")
+
+def get_velocity():
+    while True: 
+        
+        value = float(input("Enter max velocity in m/s (eg. 67.0): "))
+        if value <= 0:
+            print("[red]Error: Velocity must be positive.[/red]")
+        else:
+            return value
+        print("[red]Error: Invalid number.[/red]")
+
+def get_aircraft_purpose():
+    while True:
+        print("\nEnter Aircraft Purpose:")
+        print("1 - Glider")
+        print("2 - Cargo Plane")
+        print("3 - Fighter Jet")
+        print("4 - Commercial Airliner")
+        print("5 - General Aviation")
+
+        
+        choice = int(input("Select purpose (1-5): "))
+        if 1 <= choice <= 5:
+            return choice
+        else:
+            print("[red]Error: Must be between 1 and 5.[/red]")
+        
+        print("[red]Error: Invalid input.[/red]")
+
+def get_cd0():
+    while True:
+        value = float(input("\nEnter zero-lift drag coefficient (eg. 0.032): "))
+        if value <= 0:
+            print("[red]Error: Velocity must be positive.[/red]")
+        else:
+            return value
+        print("[red]Error: Invalid number.[/red]")
+
+def get_oswald_efficiency():
+    while True:
+        value = input("Enter Oswald efficiency factor (default 0.80): ")
+        return float(value) if value else 0.8
+
+# RANGES
+def give_cl_values():
+    cl_values = np.linspace(0.2, 1.5, 100)
+    return cl_values
+
+# CALC SECTION
+def calculate_air_density(altitude):
+    sea_level_density = 1.225
+    return sea_level_density
+
+def calc_aspect_ratio(wingspan, wing_area):
+    return wingspan**2 / wing_area
+
+def calc_induced_drag_factor(oswald, aspect_ratio):
+    return 1 / (math.pi * oswald * aspect_ratio)
+
+def calc_velocity(weight, rho, wing_area, CL):
+    return (2 * weight / (rho * wing_area * CL)) ** 0.5
+
+def calc_cd(cd0, k, CL):
+    return cd0 + k * CL**2
+
+def calc_lift(rho, velocity, wing_area, CL):
+    return 0.5 * rho * velocity**2 * wing_area * CL
+
+def calc_drag(rho, V, wing_area, CD):
+    return 0.5 * rho * V**2 * wing_area * CD
+
+def calc_LD(lift, drag):
+    return lift / drag
+
+# Performance Targets
+def get_performance_targets(purpose):
+    if purpose == "1":
+        return {"LD": (30, 70), "speed": (20, 80)}
+    
+    elif purpose == "2":
+        return {"LD": (15, 25), "speed": (150, 250)}
+    
+    elif purpose == "3":
+        return {"LD": (5, 12), "speed": (200, 600)}
+    
+    elif purpose == "4":
+        return {"LD": (15, 25), "speed": (200, 300)}
+    
+    elif purpose == "5":
+        return {"LD": (8, 15), "speed": (50, 150)}
+    
+    else:
+        return None
+
+#Print the calculations dashboard
+def generate_metric_dashboard(rho, aspect_ratio, k, V, CD, lift, drag, LD):
+    return {
+        "Air Density ": rho,
+        "Aspect Ratio ": aspect_ratio,
+        "Induced Drag Factor": k,
+        "Velocity": V,
+        "Coefficient of Drag": CD,
+        "Lift": lift,
+        "Drag": drag,
+        "Lift to Drag Ratio": LD
+    }
+
+# TABLE
+def display_dashboard(metric_dashboard):
+    table = Table(title="[bold cyan not italic]\nMetrics[/bold cyan not italic]", title_justify="left")
+
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="magenta")
+
+    for key, value in metric_dashboard.items():
+        # handle numpy arrays safely
+        if isinstance(value, np.ndarray):
+            value = float(np.mean(value))
+
+        table.add_row(key, f"{float(value):.2f}")
+
+    print(table)
+
+def score(purpose, LD, V):
+    targets = get_performance_targets(str(purpose))
+    
+    if targets is None:
+        print("Invalid aircraft purpose")
+        return
+
+    best_idx = np.argmax(LD)
+    best_LD = LD[best_idx]
+    best_V = V
+
+    ld_min, ld_max = targets["LD"]
+    sp_min, sp_max = targets["speed"]
+
+    print("\n[bold cyan]Design Evaluation[/bold cyan]")
+    print(f"L/D achieved: {best_LD:.2f}")
+    print(f"Speed achieved: {best_V:.2f} m/s")
+
+    # GOOD/BAD Design
+
+    if purpose == 1:
+        if ld_min <= best_LD <= ld_max and sp_min <= best_V <= sp_max:
+            print("[bold green]Good design for Glider[/bold green]")
+        else:
+            print("[bold red]Poor design for Glider[/bold red]")
+
+    elif purpose == 2:
+        if ld_min <= best_LD <= ld_max and sp_min <= best_V <= sp_max:
+            print("[bold green]Good design for Cargo Plane[/bold green]")
+        else:
+            print("[bold red]Poor design for Cargo Plane[/bold red]")
+
+    elif purpose == 3:
+        if ld_min <= best_LD <= ld_max and sp_min <= best_V <= sp_max:
+            print("[bold green]Good design for Fighter Jet[/bold green]")
+        else:
+            print("[bold red]Poor design for Fighter Jet[/bold red]")
+
+    elif purpose == 4:
+        if ld_min <= best_LD <= ld_max and sp_min <= best_V <= sp_max:
+            print("[bold green]Good design for Commercial Airliner[/bold green]")
+        else:
+            print("[bold red]Poor design for Commercial Airliner[/bold red]")
+
+    elif purpose == 5:
+        if ld_min <= best_LD <= ld_max and sp_min <= best_V <= sp_max:
+            print("[bold green]Good design for General Aviation[/bold green]")
+        else:
+            print("[bold red]Poor design for General Aviation[/bold red]")
+
+    else:
+        print("Unknown aircraft type")
+
+# EXPLANATIONS
+def explain_wing_area(wing_area):
+    return f"Wing Area: {wing_area} m^2 Larger wings generate more lift but increase drag."
+
+def explain_aspect_ratio(ar):
+    return f"Aspect Ratio: {ar} → Higher values mean long, narrow wings (better efficiency, less drag)."
+
+def explain_weight(weight):
+    return f"Weight: {weight} N → Heavier aircraft require more lift to stay airborne."
+
+def explain_engine(engine_type):
+    if engine_type == 1:
+        return "Engine Type: Propeller → More efficient at lower speeds."
+    else:
+        return "Engine Type: Jet → Better for high-speed flight but less efficient."
+
+# MAIN PROGRAM
+def main():
+    show_intro()
+
+    wing_area = get_wing_area()
+    wingspan = get_wingspan()
+    weight = get_weight()
+    engine_type = get_engine_type()
+    altitude = get_altitude()
+    V = get_velocity()
+    purpose = get_aircraft_purpose()
+    cd0 = get_cd0 ()
+    oswald = get_oswald_efficiency()
+
+    CL = give_cl_values()
+
+    rho = calculate_air_density(altitude)
+    aspect_ratio = calc_aspect_ratio(wingspan, wing_area)
+    k = calc_induced_drag_factor(oswald, aspect_ratio)
+    #V = calc_velocity(weight, rho, wing_area, CL)
+    CD = calc_cd(cd0, k, CL)
+    lift = calc_lift(rho, V, wing_area, CL)
+    drag = calc_drag(rho, V, wing_area, CD)
+    LD = calc_LD(lift, drag)
+
+    metric_dashboard = generate_metric_dashboard(rho, aspect_ratio, k, V, CD, lift, drag, LD)
+
+    #targets = get_performance_targets(purpose)
+    results = score(purpose, LD, V)
+    print(results)
+
+    display_dashboard(metric_dashboard)
+    #evaluate_design(purpose, dashboard)
+
+# NESTED LOOP 
+def run_simulation():
+    while True:  # OUTER LOOP
+        main()
+
+        while True:  # INNER LOOP (validation)
+            again = input("\nRun another simulation? (y/n): ").lower()
+            if again in ["y", "n"]:
+                break
+            else:
+                print("[red]Error: Enter 'y' or 'n'.[/red]")
+
+        if again == "n":
+            print("Goodbye!")
+            break
+
+if __name__ == "__main__":
+    run_simulation()
